@@ -1,0 +1,27 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Common generated files
+node_modules/
+.pnpm-store/
+*.egg-info/
+.next/
+dist/
+build/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+coverage/
+*.log
+.DS_Store
+Thumbs.db
+
+# Local traveler data
+data/private/
