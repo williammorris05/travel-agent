@@ -12,7 +12,8 @@ class ModelUnavailable(Exception):
 
 
 class OpenAITransport:
-    def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None):
+    def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None, *, ledger=None):
+        self.ledger = ledger
         self.settings = settings
         self.client = client
         self.calls = 0
@@ -22,6 +23,8 @@ class OpenAITransport:
         with self.lock:
             if not self.settings.chat_available or self.calls >= self.settings.model_max_calls:
                 raise ModelUnavailable("Model is not configured or the local call allowance is exhausted.")
+            if self.ledger is not None and not self.ledger.reserve('model', self.settings.model_max_calls):
+                raise ModelUnavailable("Persistent model allowance unavailable or exhausted.")
             self.calls += 1
         payload = {
             "model": self.settings.model_name, "store": False,

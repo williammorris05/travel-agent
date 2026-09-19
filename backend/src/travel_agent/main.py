@@ -7,6 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel
 
 from travel_agent.settings import Settings
+from travel_agent.usage import UsageLedger
 from travel_agent.providers.serpapi_hotels import SerpApiHotels
 from travel_agent.sessions import SessionStore
 from travel_agent.trips_api import router, error
@@ -42,9 +43,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application = FastAPI(title="Travel Agent", version="0.1.0")
     application.state.trips = SessionStore()
     application.state.settings = configuration
-    application.state.hotels = SerpApiHotels(configuration)
+    application.state.usage = UsageLedger(configuration.usage_db)
+    application.state.hotels = SerpApiHotels(configuration, ledger=application.state.usage)
     application.state.chat_transport = (
-        (GeminiTransport(configuration) if configuration.model_provider == "gemini" else OpenAITransport(configuration))
+        (GeminiTransport(configuration, ledger=application.state.usage) if configuration.model_provider == "gemini" else OpenAITransport(configuration, ledger=application.state.usage))
         if configuration.chat_available else None)
     application.include_router(router)
 

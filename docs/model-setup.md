@@ -32,9 +32,10 @@ Use synthetic travel details for the evaluation.
 One extraction call is allowed per submitted message, with no automatic retry or
 model tools, a 25-second HTTP timeout, 30-second workflow timeout, and 1,600 output
 tokens. The prompt is bounded to 40,000 characters. Failed requests consume the
-local call allowance. The allowance is shared by trips in one process and resets
-on restart: it is a development guard, not a durable financial budget. A free-tier
-project without billing is the cost boundary. Hosted use needs durable accounting.
+local call allowance. A SQLite attempt ledger shares the allowance across trips,
+model providers and restarts. The cap is a lifetime total, not a per-run refill.
+See [reliability and limits](reliability.md). This is an application guard, not an
+account-wide financial budget; a free-tier project without billing is the cost boundary.
 
 Conversation messages are stored in server memory (last 20 messages; last 8 sent
 as context). Current preferences are authoritative. Provider requests use

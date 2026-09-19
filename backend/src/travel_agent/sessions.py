@@ -13,6 +13,10 @@ class RevisionConflict(Exception):
     pass
 
 
+class RefreshLimit(Exception):
+    pass
+
+
 class ConversationMessage(Contract):
     role: Literal["user", "assistant"]
     text: str
@@ -25,6 +29,8 @@ class Session(Contract):
     last_update_source: str | None = None
     result: ResultSnapshot | None = None
     activity_result: ResultSnapshot | None = None
+    source_issues: dict[str, str] = Field(default_factory=dict)
+    refresh_request_id: str | None = None
     conversation_revision: int = 0
     messages: list[ConversationMessage] = Field(default_factory=list)
 
@@ -41,6 +47,22 @@ class SessionStore:
         self._sessions: dict[str, Session] = {}
         self._lock = RLock()
         self._chat_inflight: set[str] = set()
+        self._refresh_requests: dict[str, set[str]] = {}
+
+    def refresh_seen(self, session_id: str, request_id: str) -> bool:
+        with self._lock:
+            seen = self._refresh_requests.get(session_id, set())
+            if request_id in seen:
+                return True
+            if len(seen) >= 100:
+                raise RefreshLimit()  # Bound memory without forgetting spent requests.
+            return False
+
+    def record_issue(self, previous: Session, source: str, message: str):
+        with self._lock:
+            current = self._sessions[previous.id]
+            if current.revision == previous.revision and current.conversation_revision == previous.conversation_revision:
+                current.source_issues[source] = message
 
     @contextmanager
     def chat_turn(self, session_id: str):
@@ -83,12 +105,33 @@ class SessionStore:
                 raise RevisionConflict()
             if activities:
                 current.activity_result = result.model_copy(deep=True)
+                current.source_issues.pop('activities', None)
             else:
                 current.result = result.model_copy(deep=True)
+                current.source_issues.pop('hotels', None)
             return current.model_copy(deep=True)
 
+    def publish_bundle(self, previous: Session, result: ResultSnapshot | None, activity: ResultSnapshot,
+                       issues: dict[str, str], request_id: str) -> Session:
+        with self._lock:
+            current = self._sessions[previous.id]
+            if current.revision != previous.revision or current.conversation_revision != previous.conversation_revision:
+                raise RevisionConflict()
+            if activity.preference_revision != current.revision or result is not None and result.preference_revision != current.revision:
+                raise RevisionConflict()
+            next_state = current.model_copy(deep=True)
+            if result is not None:
+                next_state.result = result.model_copy(deep=True)
+            next_state.activity_result = activity.model_copy(deep=True)
+            next_state.source_issues = dict(issues)
+            next_state.refresh_request_id = request_id
+            self._refresh_requests.setdefault(previous.id, set()).add(request_id)
+            self._sessions[previous.id] = next_state
+            return next_state.model_copy(deep=True)
+
     def commit_chat(self, previous: Session, preferences: Preferences, result: ResultSnapshot | None,
-                    user_text: str, reply: str, activity_result: ResultSnapshot | None = None) -> Session:
+                    user_text: str, reply: str, activity_result: ResultSnapshot | None = None,
+                    source_issues: dict[str, str] | None = None) -> Session:
         with self._lock:
             current = self._sessions[previous.id]
             if current.revision != previous.revision or current.conversation_revision != previous.conversation_revision:
@@ -107,7 +150,11 @@ class SessionStore:
                                                        ConversationMessage(role="assistant", text=reply)])[-20:]
             if result is not None:
                 next_state.result = result.model_copy(deep=True)
+                next_state.source_issues.pop('hotels', None)
             if activity_result is not None:
                 next_state.activity_result = activity_result.model_copy(deep=True)
+                next_state.source_issues.pop('activities', None)
+            if source_issues is not None:
+                next_state.source_issues.update(source_issues)
             self._sessions[previous.id] = next_state
             return next_state.model_copy(deep=True)

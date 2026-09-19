@@ -20,7 +20,7 @@ test('hotel cards render stay-only evidence, unknown totals and escaped provider
     assert.match(html, /\$240\.00/)
     assert.match(html, /Whole-trip total: unknown/)
     assert.match(html, /2027-01-01/)
-    assert.match(html, /earlier preferences/)
+    assert.match(html, /evidence expired, or a refresh was incomplete/)
     assert.match(html, /&lt;script&gt;/)
     assert.doesNotMatch(html, /<script>|Synthetic example|All required fixture categories included/)
     assert.match(html, /href="https:\/\/example.com\/hotel"/)

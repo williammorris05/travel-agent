@@ -1,4 +1,4 @@
-# Trip API (L2)
+# Trip API
 
 Interactive contracts: http://127.0.0.1:8000/docs. All routes use JSON.
 
@@ -85,8 +85,8 @@ requirements exclude candidates with an explanation.
 
 PATCH changes state only; call `/plan` explicitly to refresh. All costs in the
 current catalog have `evidence.kind=demo`. No authentic accommodation, fare,
-permit, access, or activity availability is represented. The UI is still the
-connection preview until L3.
+permit, access, or activity availability is represented by the fixture catalog.
+The connected UI supports commands, sliders and opt-in configured chat.
 
 
 ## Natural-language messages
@@ -98,3 +98,5 @@ L5: concurrent messages for one session return 409 before a second model call. A
 L6: configured live mode routes POST /trips/{id}/plan and model-driven planning to SerpApi. Results may contain kind=hotel with hotel_cost; total_cost.total remains null and missing categories stay explicit. Health hotel_search_configured indicates configuration only. Provider failures return 503 hotel_unavailable, retain previous results and never substitute fixtures. See docs/hotel-setup.md.
 
 L7: POST /trips/{id}/activities takes expected_revision and returns a separate activity_result plus activities_stale. Party size is required. Published source-reviewed listings are available independently of fixture/live trip search and never replace failed hotel results. Model intent activities and /activities route to this guide. Source facts expire for new generation after 30 days; no automated external fetch occurs.
+
+L8: POST /trips/{id}/refresh takes expected_revision and request_id (UUID). It returns independently usable trip/hotel and activity results, with source_issues for partial failure. Completed request IDs deduplicate external work for the session; concurrent requests return 409. The per-trip 100-refresh bound returns 429. results_stale and activities_stale include evidence age and failed-refresh notices, not just preference revisions. A hotel failure during chat now returns partial state with validated preferences saved; model failures remain atomic. See [reliability](reliability.md).

@@ -62,7 +62,9 @@ pnpm --dir frontend dev
 ```
 
 Run those two commands in separate terminals. Open [the app](http://127.0.0.1:5173).
-The page must show **Backend connected** and the three demo destinations.
+The page must show **Fixture demo**, **Trip commands** (without a model key), and
+**Fixture service · no live bookings**. Select **Cheap weekend** for three synthetic
+comparisons. Follow [the demo walkthrough](demo.md) for the full journey.
 Click **Check connection** to repeat the browser-to-backend check.
 [Health JSON](http://127.0.0.1:8000/api/health) and
 [API documentation](http://127.0.0.1:8000/docs) are also available.
@@ -80,11 +82,11 @@ and enables the Milwaukee hotel pilot. It never falls back to synthetic data.
 See [hotel setup](hotel-setup.md) for boundaries and the pending live gate.
 Fixture mode reports `planning_available=true` and `fixtures_ready`.
 
-No credential is consumed by L0. Model provider, model budget, and authenticated
-travel-provider access remain unresolved. The structured-output spike uses
-canned JSON supplied by a test transport, not an LLM. It demonstrates validation
-and error propagation only. The transport boundary is retained for L4; Pydantic
-AI is deferred until a concrete model/tool need warrants it.
+Natural-language chat is opt-in: see [model setup](model-setup.md). Without a model,
+use commands and sample trips. Model/hotel adapters are implemented and tested with
+controlled responses; authenticated validation remains pending. For no-provider
+replay, use TRAVEL_DATA_MODE=fixture, TRAVEL_MODEL_PROVIDER=disabled,
+TRAVEL_MODEL_MAX_CALLS=0 and TRAVEL_HOTEL_MAX_CALLS=0 (the example defaults).
 
 ## Verify
 
@@ -102,12 +104,16 @@ and an `/api` routing configuration.
 
 ## Current boundaries
 
-L0 includes a connection preview, health/schema response, validated data mode,
-and a provider-independent JSON-output validation spike. L1 adds validated trip
-state, revision checks, and cost/evidence contracts; see [API reference](api.md).
-L2 adds eight synthetic candidates, complete costs, filtering, ranking, and an explicit
-plan endpoint. L3 connects demo commands, sliders, summary and cards. Natural-language AI and live search are later loops. The three
-destinations are provisional fixture scope, not verified recommendations.
+See [implementation architecture](implementation.md) and [evaluation](evaluation.md)
+for current capabilities and pending live gates. Fixture destinations are provisional
+scope, not verified offers. Trips disappear on restart; select **New trip** after an
+expired-session message. Provider counts persist: see [reliability](reliability.md).
+Run one worker. The local unauthenticated API is not ready for public hosting.
+
+If connection fails, start both processes and check the health URL. Stop your old
+instance if a port is occupied. After configuration changes, restart the backend and
+select **Check connection**. A 409 requires reloading authoritative trip state.
+Do not delete the usage database to retry an exhausted provider allowance.
 
 See the [vault build log](<../../../../Obsidian Vault/2. Projects/Travel Agent/Travel Agent - Build Log.md>)
 for evidence and the [loop plan](<../../../../Obsidian Vault/2. Projects/Travel Agent/Travel Agent - Build Loops.md>)

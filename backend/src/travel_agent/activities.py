@@ -25,7 +25,7 @@ def activity_guide(preferences: Preferences, revision: int) -> ResultSnapshot:
     if preferences.adults is None:
         return ResultSnapshot(preference_revision=revision, created_at=now, status="unavailable",
                               coverage_gaps=["Set one or two adults before comparing activity costs."])
-    if (now - REVIEWED).days > 30:
+    if not 0 <= (now - REVIEWED).total_seconds() <= 30 * 86400:
         return ResultSnapshot(preference_revision=revision, created_at=now, status="unavailable",
                               coverage_gaps=["Activity source review has expired. Recheck the official rates before showing prices."])
     adults = preferences.adults

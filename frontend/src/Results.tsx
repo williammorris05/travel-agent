@@ -70,8 +70,8 @@ function OptionCard({ option, index }: { option: Option; index: number }) {
 export function Results({ result, stale, activities = false }: { result: Snapshot; stale: boolean; activities?: boolean }) {
   return <section className={stale ? 'results stale' : 'results'} aria-label={activities ? 'Researched activities' : 'Trip options'}>
     <div className="results-heading"><h2>{activities ? 'Milwaukee activity guide.' : result.status === 'options' ? result.options[0]?.kind === 'hotel' ? 'Hotel leads to explore.' : 'A few ways to go.' : result.status === 'no_match' ? 'No usable options returned.' : 'This search is unavailable.'}</h2>
-      <p>{stale ? 'Previous preferences · update to compare again' : 'Based on your saved preferences'}<br />Calculated {new Date(result.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p></div>
-    {stale && <p className="notice">These options reflect earlier preferences. Their prices and fit have not been refreshed.</p>}
+      <p>{stale ? 'Needs review · update to compare again' : 'Based on your saved preferences'}<br />Calculated {new Date(result.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p></div>
+    {stale && <p className="notice">Preferences changed, evidence expired, or a refresh was incomplete. These results need review before comparing prices and fit.</p>}
     <div className="option-grid">{result.options.map((option, index) => option.kind === 'activity' ? <ActivityCard key={option.id} option={option} /> : option.kind === 'hotel' ? <HotelCard key={option.id} option={option} /> : <OptionCard key={option.id} option={option} index={index} />)}</div>
     <details className="coverage" open={result.status !== 'options'}><summary>Coverage & excluded options</summary>
       <ul>{result.coverage_gaps.map(gap => <li key={gap}>{gap}</li>)}</ul>

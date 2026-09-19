@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     model_max_calls: int = Field(default=0, ge=0, le=100)
     serpapi_api_key: SecretStr | None = None
     hotel_max_calls: int = Field(default=0, ge=0, le=10)
+    usage_db: Path = BACKEND_DIR.parent / 'data' / 'private' / 'usage.sqlite3'
 
     @property
     def hotels_available(self) -> bool:

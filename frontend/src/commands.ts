@@ -48,5 +48,5 @@ export function parseCommand(text: string): Command {
     } catch { /* Report the supported syntax below. */ }
     throw new Error('Use /set followed by a JSON object of preference changes.')
   }
-  throw new Error('This preview accepts demo commands only. Try /budget 200 or choose an example. Natural-language chat comes in L4.')
+  throw new Error('Unknown command. Try /budget 200 or choose an example. Natural-language chat requires a configured model.')
 }

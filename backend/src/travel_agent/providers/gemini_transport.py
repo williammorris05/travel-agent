@@ -9,7 +9,8 @@ from travel_agent.settings import Settings
 
 
 class GeminiTransport:
-    def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None):
+    def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None, *, ledger=None):
+        self.ledger = ledger
         self.settings = settings
         self.client = client
         self.calls = 0
@@ -19,6 +20,8 @@ class GeminiTransport:
         with self.lock:
             if not self.settings.chat_available or self.calls >= self.settings.model_max_calls:
                 raise ModelUnavailable("Model unavailable or local call allowance exhausted")
+            if self.ledger is not None and not self.ledger.reserve('model', self.settings.model_max_calls):
+                raise ModelUnavailable("Persistent model allowance unavailable or exhausted.")
             self.calls += 1
         payload = {"model": self.settings.model_name, "input": prompt, "store": False,
                    "system_instruction": "Extract travel preferences using the supplied rules and schema. No tools or free-form claims.",

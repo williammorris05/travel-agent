@@ -1,18 +1,20 @@
 from typing import Literal
 import logging
 from time import monotonic
+from uuid import UUID
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import Field, ValidationError
 
 from travel_agent.contracts import Contract, PreferenceUpdate, Preferences
-from travel_agent.sessions import RevisionConflict, Session, SessionStore
+from travel_agent.sessions import RefreshLimit, RevisionConflict, Session, SessionStore
 from travel_agent.planning import plan
 from travel_agent.chat import converse
 from travel_agent.providers.openai_transport import ModelUnavailable
 from travel_agent.providers.serpapi_hotels import HotelUnavailable
 from travel_agent.activities import activity_guide
+from travel_agent.freshness import evidence_expired
 
 logger = logging.getLogger("travel_agent.chat")
 
@@ -41,9 +43,9 @@ class ErrorResponse(Contract):
 def response(session: Session, planning_available: bool = False) -> TripResponse:
     missing = session.preferences.missing()
     return TripResponse(**session.model_dump(), missing_fields=missing, planning_available=planning_available,
-                        activities_stale=session.activity_result is not None and session.activity_result.preference_revision != session.revision,
+                        activities_stale=session.activity_result is not None and (session.activity_result.preference_revision != session.revision or evidence_expired(session.activity_result) or 'activities' in session.source_issues),
                         status="needs_clarification" if missing else "ready",
-                        results_stale=session.result is not None and session.result.preference_revision != session.revision)
+                        results_stale=session.result is not None and (session.result.preference_revision != session.revision or evidence_expired(session.result) or 'hotels' in session.source_issues))
 
 
 def error(status: int, code: str, message: str) -> JSONResponse:
@@ -93,14 +95,50 @@ class ChatRequest(PlanRequest):
     message: str = Field(min_length=1, max_length=3000)
 
 
+class RefreshRequest(PlanRequest):
+    request_id: UUID
+
+
+@router.post("/{trip_id}/refresh", response_model=TripResponse)
+async def refresh(trip_id: str, body: RefreshRequest, request: Request):
+    store = request.app.state.trips
+    try:
+        with store.chat_turn(trip_id):
+            previous = store.get(trip_id)
+            if previous.revision != body.expected_revision:
+                raise RevisionConflict()
+            if store.refresh_seen(trip_id, str(body.request_id)):
+                return response(previous, available(request))
+            guide = activity_guide(previous.preferences, previous.revision)
+            result, issues = None, {}
+            if guide.status == 'unavailable':
+                issues['activities'] = 'Activity guide unavailable; review the coverage details.'
+            if previous.preferences.missing():
+                issues['hotels'] = 'Complete trip preferences before requesting trip or hotel results.'
+            else:
+                try:
+                    result = (await request.app.state.hotels.search(previous.preferences, previous.revision)
+                              if request.app.state.settings.data_mode == 'live' else plan(previous.preferences, previous.revision))
+                except HotelUnavailable:
+                    issues['hotels'] = 'Hotel search unavailable or allowance exhausted. Previous hotel results were retained; no fixtures substituted.'
+            return response(store.publish_bundle(previous, result, guide, issues, str(body.request_id)), available(request))
+    except KeyError:
+        return error(404, 'trip_not_found', 'This trip no longer exists.')
+    except RevisionConflict:
+        return error(409, 'revision_conflict', 'A search is running or preferences changed. Reload before retrying.')
+    except RefreshLimit:
+        return error(429, 'refresh_limit', 'This trip reached its 100-refresh limit. Start a new trip; provider allowances remain shared.')
+
+
 @router.post("/{trip_id}/activities", response_model=TripResponse)
 def activities(trip_id: str, body: PlanRequest, request: Request):
     store = request.app.state.trips
     try:
-        session = store.get(trip_id)
-        if session.revision != body.expected_revision:
-            raise RevisionConflict()
-        return response(store.publish(trip_id, activity_guide(session.preferences, session.revision), activities=True), available(request))
+        with store.chat_turn(trip_id):
+            session = store.get(trip_id)
+            if session.revision != body.expected_revision:
+                raise RevisionConflict()
+            return response(store.publish(trip_id, activity_guide(session.preferences, session.revision), activities=True), available(request))
     except KeyError:
         return error(404, "trip_not_found", "This trip no longer exists.")
     except RevisionConflict:
@@ -149,6 +187,7 @@ async def generate(trip_id: str, body: PlanRequest, request: Request):
         if session.revision != body.expected_revision:
             raise RevisionConflict()
         if not available(request):
+            store.record_issue(session, 'hotels', 'Hotel search is not configured. Previous results are unrefreshed.')
             return error(503, "live_unavailable", "Live adapters are not configured; no fixtures were substituted.")
         if session.preferences.missing():
             return response(session, True)
@@ -157,6 +196,7 @@ async def generate(trip_id: str, body: PlanRequest, request: Request):
                       if request.app.state.settings.data_mode == "live" else plan(session.preferences, session.revision))
             return response(store.publish(trip_id, result), True)
     except HotelUnavailable:
+        store.record_issue(session, 'hotels', 'Hotel search unavailable; previous results are unrefreshed.')
         return error(503, "hotel_unavailable", "Hotel search failed or its allowance is exhausted. Previous results are retained; no fixtures were substituted.")
     except KeyError:
         return error(404, "trip_not_found", "This trip does not exist or the server restarted.")

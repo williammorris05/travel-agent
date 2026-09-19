@@ -4,6 +4,7 @@ import { ApiError, request } from './api'
 import { commandHelp, demoChanges, parseCommand } from './commands'
 import { PreferenceControls } from './Controls'
 import { money, Results } from './Results'
+import { evidenceExpired } from './freshness'
 import type { Changes, Controls, Health, Trip } from './types'
 import './styles.css'
 
@@ -17,6 +18,8 @@ function rememberedId() { try { return sessionStorage.getItem(storageKey) } catc
 function remember(id: string) { try { sessionStorage.setItem(storageKey, id) } catch { /* In-memory state still works. */ } }
 
 function App() {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer) }, [])
   const [trip, setTrip] = useState<Trip | null>(null)
   const [health, setHealth] = useState<Health | null>(null)
   const [busy, setBusy] = useState('Connecting…')
@@ -109,7 +112,16 @@ function App() {
     say('The researched Milwaukee activity guide is below. Admission and rental rates are separate from your trip total; availability remains unverified.')
   }
   const hasDraft = Object.values(dirty).some(Boolean)
-  const stale = !!trip?.results_stale || hasDraft || needsReload
+  const stale = !!trip?.results_stale || evidenceExpired(trip?.result, now) || hasDraft || needsReload
+  async function refreshAll() {
+    const state = current.current
+    if (!state) return
+    const next = await request<Trip>(`/trips/${state.id}/refresh`, 'POST', {
+      expected_revision: state.revision, request_id: crypto.randomUUID(),
+    }, 25000)
+    save(next)
+    say(Object.keys(next.source_issues).length ? 'Refresh finished with source limitations. Review the notices and available results below.' : 'Trip options and the separate researched activity guide are updated. Check each source’s price and availability limits.')
+  }
 
   function chooseDemo(kind: 'cheap' | 'adventure' | 'private') {
     void run('Loading example…', async () => {
@@ -189,12 +201,14 @@ function App() {
           {trip?.missing_fields.length ? <p className="notice">Still needed: {trip.missing_fields.map(field => missingLabels[field] || field).join(', ')}.</p> : null}
           <div className="plan-row"><p>{hasDraft ? 'Release the slider to save your preference.' : trip?.results_stale ? 'Preferences saved. Your options need an update.' : 'Compare when your preferences are ready.'}</p><button className="primary" disabled={blocked || hasDraft || !trip?.planning_available || !!trip?.missing_fields.length} onClick={() => void run('Comparing options…', generate)}>{busy === 'Comparing options…' ? 'Comparing…' : trip?.result ? 'Update options' : 'Find options'} ↗</button></div>
           <button disabled={blocked || hasDraft || !p?.adults} onClick={() => void run('Comparing activities…', exploreActivities)}>Explore Milwaukee activities ↗</button>
+          <button disabled={blocked || hasDraft || !p?.adults} onClick={() => void run('Refreshing sources…', refreshAll)}>Refresh options + activity guide ↗</button>
         </section>
         <div role="status" className="status-line" aria-live="polite">{busy || announcement}</div>
         {problem && <div className="error-panel" role="alert"><strong>Couldn’t complete that request.</strong><p>{problem}</p><p>Any displayed options are from the last successful search.</p></div>}
         {needsReload && !expired && <button onClick={() => void connect()} disabled={!!busy}>Reload trip state</button>}
+        {Object.entries(trip?.source_issues || {}).map(([source, issue]) => <p className="notice" role="status" key={source}>{issue}</p>)}
         {trip?.result && <Results result={trip.result} stale={stale} />}
-        {trip?.activity_result && <Results result={trip.activity_result} activities stale={trip.activities_stale || hasDraft || needsReload} />}
+        {trip?.activity_result && <Results result={trip.activity_result} activities stale={trip.activities_stale || evidenceExpired(trip.activity_result, now) || hasDraft || needsReload} />}
         {!trip?.result && <section className="empty-results"><span aria-hidden="true">↗</span><h2>Leave room for a different route.</h2><p>{health?.data_mode === 'live' ? 'Hotel prices will appear here after a configured search. No whole-trip cost is promised.' : 'Your options will appear here, with the real tradeoffs behind each synthetic price.'}</p></section>}
       </div>
     </div>

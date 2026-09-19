@@ -23,7 +23,7 @@ The vault is the primary planning source of truth. Repository docs are navigatio
 - Use meaningful checks appropriate to the change. Do not mark a work item complete on scaffolding alone.
 - Continue routine authorized reversible work without adding approval steps. These instructions require reference and documentation, not user confirmation for each item.
 
-Current phase: L3 connected demo interface complete, L4 next. Read `Travel Agent - L3 Interface.md` for UI behavior and evidence. Read `Travel Agent - L2 Fixture Ranking.md` for scoring, constraints and evidence, `Travel Agent - L1 Contracts.md` for state semantics, and `Travel Agent - L0 Scaffold.md` for setup. A real model and live travel integrations are not configured.
+Current phase: L9 fixture reproduction and presentation delivered; full live release pending. Start with `Travel Agent - L9 Demo Release.md`. Read `Travel Agent - L3 Interface.md` for UI behavior, `Travel Agent - L2 Fixture Ranking.md` for scoring, and `Travel Agent - L1 Contracts.md` for state semantics. Model/hotel adapters are implemented but authenticated validation remains pending; automated activity schedules are unimplemented.
 
 
 L4 update: integration is now built; real-model validation is pending. Read Travel Agent - L4 Chat Integration.md and Travel Agent - Free Model APIs.md. Do not mark L4 complete without the real conversation gate.
@@ -33,3 +33,7 @@ L5 update: read Travel Agent - L5 Hardening.md. Deterministic reliability harden
 L6 update: read Travel Agent - L6 Hotel Integration.md. Hotel adapter and UI pass 102 backend/seven frontend tests; user deferred key setup. Live gate remains pending. Preserve separate hotel-only evidence and whole-trip unknowns.
 
 L7 update: read Travel Agent - L7 Activities.md. Source-reviewed guide passes 113 backend tests; automated activity schedules remain pending. Never refresh REVIEWED without rechecking official sources.
+
+L8 update: read Travel Agent - L8 Reliability.md before changing quotas, freshness or refresh flows. SQLite counts persist across restarts; sessions remain single-worker and ephemeral. Combined live validation remains pending. See docs/reliability.md for actual operation and API semantics.
+
+L9 update: read Travel Agent - L9 Demo Release.md for reproduction evidence and remaining gates. Public setup, architecture, evaluation, demo transcript and case study are in docs. The isolated fixture install passes 123 backend/eight frontend tests. Full live release remains pending; do not erase these boundaries when presenting the project.

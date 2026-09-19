@@ -10,6 +10,7 @@ from pydantic import Field
 from travel_agent.contracts import Contract, Preferences, PreferencesPatch
 from travel_agent.planning import plan
 from travel_agent.activities import activity_guide
+from travel_agent.providers.serpapi_hotels import HotelUnavailable
 from travel_agent.providers.structured_output import JsonTransport, validated_output, strict_json
 from travel_agent.sessions import Session, SessionStore, merge
 
@@ -121,7 +122,7 @@ async def converse(store: SessionStore, previous: Session, message: str, transpo
         reply = ("Compare the researched Milwaukee activity guide below. These are published admission/rental charges, not date-specific availability or whole-trip totals."
                  if activity_result.options else "No activity guide options can be shown for these preferences. Review the coverage and exclusions below.")
     elif extracted.intent in ("plan", "refine", "explain"):
-        reusable = previous.result is not None and bool(previous.result.options) and all(
+        reusable = 'hotels' not in previous.source_issues and previous.result is not None and bool(previous.result.options) and all(
             option.kind == "hotel" and all(
                 cost.evidence.search_dates == preferences.dates and cost.evidence.adults == preferences.adults
                 and 0 <= (datetime.now(timezone.utc) - cost.evidence.retrieved_at).total_seconds() <= 300
@@ -129,7 +130,13 @@ async def converse(store: SessionStore, previous: Session, message: str, transpo
         if hotel_search is not None and reusable:
             result = previous.result.model_copy(deep=True, update={"preference_revision": revision})
         else:
-            result = await hotel_search.search(preferences, revision) if hotel_search is not None else plan(preferences, revision)
+            try:
+                result = await hotel_search.search(preferences, revision) if hotel_search is not None else plan(preferences, revision)
+            except HotelUnavailable:
+                guide = activity_guide(preferences, revision)
+                return store.commit_chat(previous, preferences, None, message,
+                    "Your preferences were saved. Hotel search failed or its allowance is exhausted. The researched activity guide remains separate; previous hotel results are unrefreshed.",
+                    activity_result=guide, source_issues={'hotels': 'Hotel search unavailable; previous results are unrefreshed.'})
         if result.status == "options" and result.options[0].kind == "hotel":
             reply = (f"Found {len(result.options)} hotel leads in Milwaukee for your dates and adults. "
                      "Compare observed stay prices below. Whole-trip budget fit, room requirements and final availability remain unverified.")

@@ -33,6 +33,8 @@ export type Snapshot = {
   options: Option[]; coverage_gaps: string[]; exclusions: { candidate_id: string; reasons: string[] }[]
 }
 export type Trip = {
+  source_issues: Record<string, string>
+  refresh_request_id: string | null
   activity_result: Snapshot | null; activities_stale: boolean
   conversation_revision: number
   messages: { role: 'user' | 'assistant'; text: string }[]

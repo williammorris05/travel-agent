@@ -93,7 +93,8 @@ def normalize(body: dict, preferences: Preferences, revision: int) -> ResultSnap
 
 
 class SerpApiHotels:
-    def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None):
+    def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None, *, ledger=None):
+        self.ledger = ledger
         self.settings, self.client = settings, client
         self.calls = 0
         self._lock = Lock()
@@ -108,6 +109,8 @@ class SerpApiHotels:
         with self._lock:
             if not self.settings.hotels_available or self.calls >= self.settings.hotel_max_calls:
                 raise HotelUnavailable("Hotel search is not configured or its local call allowance is exhausted.")
+            if self.ledger is not None and not self.ledger.reserve('hotels', self.settings.hotel_max_calls):
+                raise HotelUnavailable("Persistent hotel allowance unavailable or exhausted.")
             self.calls += 1
         params = {"engine": "google_hotels", "q": "Hotels in Milwaukee Wisconsin", "currency": "USD", "gl": "us", "hl": "en",
                   "no_cache": "true",
