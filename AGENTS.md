@@ -2,11 +2,11 @@
 
 The user requires most planning to live in the vault and be frequently referenced while building.
 
-Vault project: `C:/Users/willi/OneDrive/Documents/Obsidian Vault/2. Projects/Travel Agent`
+Vault project: `C:/Users/willi/OneDrive/Documents/Obsidian Vault/2. Projects/Portfolio/Travel Agent`
 
 ## Every implementation session
 
-Read `Travel Agent.md`, `Travel Agent - Planning.md`, `Travel Agent - Build Backlog.md`, `Travel Agent - Decision Log.md`, and the latest `Travel Agent - Build Log.md` handoff. Before implementing a feature, read its relevant specification in the same folder. Revisit it when behavior, contracts, scope, or provider assumptions change.
+Read `Travel Agent.md`, `Notes/Travel Agent - Planning.md`, `Notes/Travel Agent - Build Backlog.md`, `Notes/Travel Agent - Decision Log.md`, and the latest `Dev Log/Travel Agent - Build Log.md` handoff. Before implementing a feature, read its relevant specification in the project’s Specs folder. Revisit it when behavior, contracts, scope, or provider assumptions change.
 
 Select a concrete backlog item and mark it in progress. At meaningful checkpoints and session end, update its status and the Build Log with changes, validation evidence, limitations, and the next step. Record material decisions in the Decision Log and update the hub's current focus when it changes. Reference the relevant vault note in implementation handoffs.
 
@@ -23,7 +23,7 @@ The vault is the primary planning source of truth. Repository docs are navigatio
 - Use meaningful checks appropriate to the change. Do not mark a work item complete on scaffolding alone.
 - Continue routine authorized reversible work without adding approval steps. These instructions require reference and documentation, not user confirmation for each item.
 
-Current phase: L9 fixture reproduction and presentation delivered; full live release pending. Start with `Travel Agent - L9 Demo Release.md`. Read `Travel Agent - L3 Interface.md` for UI behavior, `Travel Agent - L2 Fixture Ranking.md` for scoring, and `Travel Agent - L1 Contracts.md` for state semantics. Model/hotel adapters are implemented but authenticated validation remains pending; automated activity schedules are unimplemented.
+Current phase: L9 fixture reproduction and presentation delivered; full live release pending. Start with `Notes/Travel Agent - L9 Demo Release.md`. Read `Notes/Travel Agent - L3 Interface.md` for UI behavior, `Notes/Travel Agent - L2 Fixture Ranking.md` for scoring, and `Notes/Travel Agent - L1 Contracts.md` for state semantics. Model/hotel adapters are implemented but authenticated validation remains pending; automated activity schedules are unimplemented.
 
 
 L4 update: integration is now built; real-model validation is pending. Read Travel Agent - L4 Chat Integration.md and Travel Agent - Free Model APIs.md. Do not mark L4 complete without the real conversation gate.

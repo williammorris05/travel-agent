@@ -115,7 +115,7 @@ instance if a port is occupied. After configuration changes, restart the backend
 select **Check connection**. A 409 requires reloading authoritative trip state.
 Do not delete the usage database to retry an exhausted provider allowance.
 
-See the [vault build log](<../../../../Obsidian Vault/2. Projects/Travel Agent/Travel Agent - Build Log.md>)
-for evidence and the [loop plan](<../../../../Obsidian Vault/2. Projects/Travel Agent/Travel Agent - Build Loops.md>)
+See the [vault build log](<../../../../Obsidian Vault/2. Projects/Portfolio/Travel Agent/Dev Log/Travel Agent - Build Log.md>)
+for evidence and the [loop plan](<../../../../Obsidian Vault/2. Projects/Portfolio/Travel Agent/Specs/Travel Agent - Build Loops.md>)
 before implementing the next increment.
 
